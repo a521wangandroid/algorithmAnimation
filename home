@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速排序可视化动画</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: 'Segoe UI', 'Monaco', monospace;
+            background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(8px);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+            width: 95%;
+            max-width: 1200px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        h2 {
+            text-align: center;
+            margin: 0 0 0.5rem 0;
+            font-weight: 600;
+            color: #f1f5f9;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        h2 span {
+            background: #f97316;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: normal;
+        }
+        .bars-container {
+            background: #0f172a;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .bars {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 6px;
+            min-height: 320px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        .bar {
+            background-color: #3b82f6;
+            width: 50px;
+            transition: all 0.2s ease;
+            border-radius: 8px 8px 4px 4px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            position: relative;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+        }
+        .bar span {
+            position: absolute;
+            top: -26px;
+            left: 0;
+            right: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            text-shadow: 0 0 2px black;
+        }
+        .bar.pivot {
+            background-color: #f97316;
+            box-shadow: 0 0 0 2px #ffb347;
+        }
+        .bar.comparing {
+            background-color: #eab308;
+        }
+        .bar.swapping {
+            background-color: #ef4444;
+            transition: all 0.1s;
+        }
+        .bar.sorted {
+            background-color: #22c55e;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin: 20px 0 15px;
+        }
+        button {
+            background: #334155;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 8px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.1s;
+            font-family: inherit;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        button:hover {
+            background: #1e293b;
+            transform: scale(0.97);
+        }
+        .info-panel {
+            background: #0f172a;
+            border-radius: 2rem;
+            padding: 12px 20px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            text-align: center;
+            border-left: 4px solid #f97316;
+        }
+        .speed-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #1e293b;
+            padding: 5px 16px;
+            border-radius: 40px;
+        }
+        select, input {
+            background: #0f172a;
+            color: white;
+            border: 1px solid #475569;
+            border-radius: 30px;
+            padding: 6px 12px;
+            font-family: monospace;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            margin-top: 1rem;
+            color: #64748b;
+        }
+        @media (max-width: 700px) {
+            .bar { width: 35px; }
+            .bar span { font-size: 0.7rem; top: -20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>⚡ 快速排序 · 可视化动画 <span>分治 + 递归</span></h2>
+    <div class="bars-container">
+        <div class="bars" id="bars"></div>
+    </div>
+    <div class="controls">
+        <button id="startBtn">▶ 开始排序</button>
+        <button id="resetBtn">🔄 随机重置</button>
+        <div class="speed-control">
+            🐌 速度 <input type="range" id="speedSlider" min="50" max="500" value="200" step="10">
+            <span id="speedVal">200</span> ms
+        </div>
+        <select id="sizeSelect">
+            <option value="6">6 元素</option>
+            <option value="8" selected>8 元素</option>
+            <option value="10">10 元素</option>
+            <option value="12">12 元素</option>
+        </select>
+    </div>
+    <div class="info-panel" id="infoPanel">
+        🧠 快速排序: 选择基准(pivot)，小于基准放左边，大于放右边，递归处理。
+    </div>
+    <footer>⭐ 橙色 = 基准元素 &nbsp;|&nbsp; 黄色 = 比较中 &nbsp;|&nbsp; 红色 = 交换 &nbsp;|&nbsp; 绿色 = 已归位</footer>
+</div>
+
+<script>
+    (function(){
+        // DOM 元素
+        const barsContainer = document.getElementById('bars');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValSpan = document.getElementById('speedVal');
+        const sizeSelect = document.getElementById('sizeSelect');
+        const infoPanel = document.getElementById('infoPanel');
+
+        // 全局数据
+        let arr = [];                // 数值数组
+        let bars = [];              // DOM 条形图数组
+        let sortingActive = false;  // 是否正在排序
+        let currentTimer = null;    // setTimeout 句柄
+        let speedMs = 200;          // 动画延迟(ms)
+
+        // ---------- 辅助函数 ----------
+        function updateSpeedDisplay() {
+            speedMs = parseInt(speedSlider.value);
+            speedValSpan.innerText = speedMs;
+        }
+
+        // 生成随机数组 (范围 30~200)
+        function generateRandomArray(n) {
+            let newArr = [];
+            for (let i = 0; i < n; i++) {
+                newArr.push(Math.floor(Math.random() * 170) + 30);
+            }
+            return newArr;
+        }
+
+        // 根据arr渲染条形图 (完整重建)
+        function renderBars() {
+            barsContainer.innerHTML = '';
+            bars = [];
+            if (arr.length === 0) return;
+            const maxVal = Math.max(...arr, 1);
+            const barWidth = Math.min(70, Math.floor(800 / arr.length));
+            for (let i = 0; i < arr.length; i++) {
+                const val = arr[i];
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                const heightPercent = (val / maxVal) * 260;
+                bar.style.height = `${Math.max(32, heightPercent)}px`;
+                bar.style.width = `${barWidth}px`;
+                const span = document.createElement('span');
+                span.innerText = val;
+                bar.appendChild(span);
+                barsContainer.appendChild(bar);
+                bars.push(bar);
+            }
+        }
+
+        // 清除所有特殊样式 (保留sorted会有问题，重置时全清)
+        function clearAllStyles() {
+            for (let i = 0; i < bars.length; i++) {
+                if (bars[i]) {
+                    bars[i].classList.remove('pivot', 'comparing', 'swapping', 'sorted');
+                }
+            }
+        }
+
+        // 单独标记已排序 (绿色)
+        function markSorted(idx) {
+            if (bars[idx]) bars[idx].classList.add('sorted');
+        }
+
+        // 标记基准 (橙色)
+        function markPivot(idx) {
+            if (bars[idx]) bars[idx].classList.add('pivot');
+        }
+        function unmarkPivot(idx) {
+            if (bars[idx]) bars[idx].classList.remove('pivot');
+        }
+
+        // 比较高亮
+        function markCompare(idx) {
+            if (bars[idx]) bars[idx].classList.add('comparing');
+        }
+        function unmarkCompare(idx) {
+            if (bars[idx]) bars[idx].classList.remove('comparing');
+        }
+
+        // 交换高亮红色
+        function markSwap(idx) {
+            if (bars[idx]) bars[idx].classList.add('swapping');
+        }
+        function unmarkSwap(idx) {
+            if (bars[idx]) bars[idx].classList.remove('swapping');
+        }
+
+        // 交换两个元素的值 并且更新UI (同时更新高度和数字)
+        async function swapElements(i, j, stepDelay) {
+            if (i === j) return;
+            // 红色闪烁表示交换
+            markSwap(i);
+            markSwap(j);
+            await delay(stepDelay * 0.6);
+            // 交换数组值
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+            // 更新两个条形的显示
+            updateBarValue(i);
+            updateBarValue(j);
+            await delay(stepDelay * 0.5);
+            unmarkSwap(i);
+            unmarkSwap(j);
+        }
+
+        // 更新单个条形数值及高度
+        function updateBarValue(idx) {
+            const bar = bars[idx];
+            if (!bar) return;
+            const val = arr[idx];
+            const span = bar.querySelector('span');
+            if (span) span.innerText = val;
+            const maxVal = Math.max(...arr, 1);
+            const newHeight = (val / maxVal) * 260;
+            bar.style.height = `${Math.max(32, newHeight)}px`;
+        }
+
+        // 刷新全部高度（当max变化时调用）
+        function refreshAllHeights() {
+            const maxVal = Math.max(...arr, 1);
+            for (let i = 0; i < arr.length; i++) {
+                const bar = bars[i];
+                if (bar) {
+                    const newHeight = (arr[i] / maxVal) * 260;
+                    bar.style.height = `${Math.max(32, newHeight)}px`;
+                }
+            }
+        }
+
+        // 延迟工具
+        function delay(ms) {
+            return new Promise(resolve => {
+                currentTimer = setTimeout(resolve, ms);
+            });
+        }
+
+        // ---------- 快速排序核心生成器 (异步步骤) ----------
+        // 使用 async generator 逐步产出动作，便于控制动画
+        async function* quickSortSteps(left, right) {
+            if (left >= right) {
+                if (left === right) {
+                    // 单个元素直接标记已排序
+                    yield { type: 'mark_sorted', index: left };
+                }
+                return;
+            }
+            // 显示当前处理的区间范围 (提示)
+            yield { type: 'info', message: `🔍 排序区间 [${left}, ${right}]，选取基准...` };
+            
+            // 选择最右侧为基准 (pivot)
+            const pivotIdx = right;
+            const pivotVal = arr[pivotIdx];
+            markPivot(pivotIdx);
+            yield { type: 'pivot_selected', index: pivotIdx, message: `📌 基准 = ${pivotVal}` };
+            await delay(speedMs * 0.8);
+            
+            let i = left - 1;
+            // 分区过程
+            for (let j = left; j <= right - 1; j++) {
+                // 高亮当前比较元素 j
+                markCompare(j);
+                yield { type: 'compare', index: j, message: `比较 arr[${j}] = ${arr[j]} 与 基准 ${pivotVal}` };
+                await delay(speedMs * 0.7);
+                
+                if (arr[j] <= pivotVal) {
+                    i++;
+                    // 如果需要交换 i 和 j
+                    if (i !== j) {
+                        yield { type: 'swap', i: i, j: j, message: `交换 ${arr[j]} 和 ${arr[i]}` };
+                        await swapElements(i, j, speedMs);
+                        yield { type: 'after_swap' };
+                    } else {
+                        yield { type: 'no_swap', message: '位置不变' };
+                        await delay(speedMs * 0.3);
+                    }
+                }
+                unmarkCompare(j);
+                yield { type: 'compare_end', index: j };
+            }
+            // 最后将基准放到正确位置 (i+1)
+            const finalPivotPos = i + 1;
+            if (finalPivotPos !== pivotIdx) {
+                yield { type: 'swap_pivot', i: finalPivotPos, j: pivotIdx, message: `将基准放到最终位置 ${finalPivotPos}` };
+                await swapElements(finalPivotPos, pivotIdx, speedMs);
+            }
+            // 移除基准高亮，标记基准位置已就位 (已归位)
+            unmarkPivot(pivotIdx);
+            markSorted(finalPivotPos);
+            yield { type: 'pivot_placed', index: finalPivotPos, message: `✅ 基准 ${pivotVal} 已归位` };
+            await delay(speedMs * 0.5);
+            
+            // 递归处理左右两侧
+            yield* quickSortSteps(left, finalPivotPos - 1);
+            yield* quickSortSteps(finalPivotPos + 1, right);
+        }
+
+        // 动画执行器
+        async function runQuickSort() {
+            if (sortingActive) {
+                // 如果已在动画，先停止
+                stopSorting();
+                await delay(30);
+            }
+            sortingActive = true;
+            clearAllStyles();
+            // 重置所有 sorted 标记视觉 (移除 green)
+            for (let i = 0; i < bars.length; i++) {
+                bars[i].classList.remove('sorted');
+            }
+            infoPanel.innerHTML = '⚡ 快速排序开始 ... 观察基准(橙色)与分区过程';
+            const generator = quickSortSteps(0, arr.length - 1);
+            let result = await generator.next();
+            while (!result.done && sortingActive) {
+                const step = result.value;
+                if (step.type === 'info') {
+                    infoPanel.innerHTML = step.message;
+                } else if (step.type === 'pivot_selected') {
+                    infoPanel.innerHTML = step.message;
+                } else if (step.type === 'compare') {
+                    infoPanel.innerHTML = step.message;
+                } else if (step.type === 'swap') {
+                    infoPanel.innerHTML = step.message;
+                } else if (step.type === 'swap_pivot') {
+                    infoPanel.innerHTML = step.message;
+                } else if (step.type === 'pivot_placed') {
+                    infoPanel.innerHTML = step.message;
+                    await delay(speedMs * 0.6);
+                } else if (step.type === 'mark_sorted') {
+                    markSorted(step.index);
+                    await delay(speedMs * 0.3);
+                }
+                // 通用延迟: 每个步骤之间留点时间
+                if (!['after_swap', 'compare_end', 'no_swap'].includes(step.type)) {
+                    await delay(speedMs * 0.2);
+                } else {
+                    await delay(speedMs * 0.1);
+                }
+                result = await generator.next();
+            }
+            if (sortingActive) {
+                // 确保所有元素都标记sorted（完整排序后）
+                for (let i = 0; i < arr.length; i++) {
+                    if (!bars[i].classList.contains('sorted')) markSorted(i);
+                }
+                infoPanel.innerHTML = '🎉 快速排序完成！所有元素已升序排列。';
+                sortingActive = false;
+            } else {
+                infoPanel.innerHTML = '⏸️ 排序已中断。';
+            }
+            if (currentTimer) clearTimeout(currentTimer);
+            currentTimer = null;
+        }
+
+        function stopSorting() {
+            if (currentTimer) {
+                clearTimeout(currentTimer);
+                currentTimer = null;
+            }
+            sortingActive = false;
+        }
+
+        // 重置数组与界面
+        function resetArray() {
+            if (sortingActive) {
+                stopSorting();
+            }
+            const size = parseInt(sizeSelect.value);
+            arr = generateRandomArray(size);
+            renderBars();
+            clearAllStyles();
+            infoPanel.innerHTML = '✨ 已生成随机数组。点击“开始排序”启动快速排序动画。';
+        }
+
+        // 监听事件
+        startBtn.onclick = () => {
+            if (sortingActive) {
+                // 如果正在排序，先停止再启动（重新开始）
+                stopSorting();
+                setTimeout(() => runQuickSort(), 40);
+            } else {
+                runQuickSort();
+            }
+        };
+        resetBtn.onclick = () => {
+            if (sortingActive) stopSorting();
+            resetArray();
+        };
+        speedSlider.oninput = () => {
+            updateSpeedDisplay();
+        };
+        sizeSelect.onchange = () => {
+            if (sortingActive) stopSorting();
+            resetArray();
+        };
+        
+        updateSpeedDisplay();
+        resetArray();
+    })();
+</script>
+</body>
+</html>
