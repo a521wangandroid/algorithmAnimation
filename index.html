@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>冒泡排序动画 - 每趟完成提示</title>
+  <style>
+      body { font-family: monospace; text-align: center; margin-top: 20px; }
+      .bars { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 250px; margin: 20px; }
+      .bar { background-color: #3498db; width: 50px; transition: all 0.2s; border-radius: 4px 4px 0 0; text-align: center; color: white; font-weight: bold; position: relative; }
+      .bar span { position: absolute; top: -24px; width: 100%; left: 0; color: black; }
+      .comparing { background-color: orange; }
+      .swapping { background-color: red; }
+      .sorted { background-color: green; }
+      button, select { margin: 5px; padding: 6px 12px; font-size: 14px; }
+      .info { background: #f0f0f0; padding: 8px; margin: 10px; border-radius: 8px; font-weight: bold; }
+
+      .controls {
+          margin: 20px 0;
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+          flex-wrap: wrap;
+      }
+      button {
+          background: #334155;
+          border: none;
+          color: white;
+          font-size: 1rem;
+          font-weight: 600;
+          padding: 10px 20px;
+          border-radius: 40px;
+          cursor: pointer;
+          transition: 0.1s;
+          font-family: inherit;
+      }
+      button:hover {
+          background: #1e293b;
+          transform: scale(0.97);
+      }
+      .info {
+          background: #f1f5f9;
+          padding: 0.8rem;
+          border-radius: 2rem;
+          margin-top: 1rem;
+          font-size: 0.9rem;
+          color: #0f172a;
+      }
+      select, input {
+          padding: 8px 12px;
+          border-radius: 40px;
+          border: 1px solid #cbd5e1;
+          font-family: monospace;
+          background: white;
+      }
+      .speed-label {
+          background: #e2e8f0;
+          border-radius: 40px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 1rem;
+      }
+      footer {
+          margin-top: 1rem;
+          font-size: 0.75rem;
+          color: #64748b;
+      }
+
+
+
+  </style>
+</head>
+<body>
+<h2>冒泡排序可视化 (每趟完成提示)</h2>
+<div class="bars" id="bars"></div>
+<div   class="controls">
+
+  <button id="start">▶ 开始排序</button>
+  <button id="reset">🔄 重置数组</button>
+   <div class="speed-label">
+    ⚡ 速度
+    <input type="range" id="speedSlider" min="100" max="5000" value="1500" step="10">
+    <span id="speedValue">1500</span> ms
+  </div>
+
+  <span>元素个数: <select id="size">
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7" selected>7</option>
+        <option value="8">8</option>
+    </select></span>
+</div>
+<div class="info" id="info">✅ 已重置。点击“开始排序”。</div>
+
+<script>
+  (function(){
+    let arr = [];
+    let bars = [];
+    let sorting = false;
+    let timer = null;
+    let speed = 1500;
+    const barsDiv = document.getElementById('bars');
+    const startBtn = document.getElementById('start');
+    const resetBtn = document.getElementById('reset');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    const sizeSelect = document.getElementById('size');
+    const infoDiv = document.getElementById('info');
+
+    // 动画速度 (毫秒)
+    let speedMs = 150;
+
+    // ---------- 辅助函数 ----------
+    function updateSpeedDisplay() {
+      speedMs = parseInt(speedSlider.value);
+      speedValue.innerText = speedMs;
+    }
+
+    // 生成随机数组 (30~160)
+    function randomArray(n){
+      let a = [];
+      for(let i=0;i<n;i++) a.push(Math.floor(Math.random()*130)+30);
+      return a;
+    }
+
+    // 渲染条形图
+    function render(){
+      barsDiv.innerHTML = '';
+      bars = [];
+      let maxVal = Math.max(...arr,1);
+      for(let i=0;i<arr.length;i++){
+        let v = arr[i];
+        let bar = document.createElement('div');
+        bar.className = 'bar';
+        let h = (v/maxVal)*180;
+        bar.style.height = Math.max(30, h)+'px';
+        bar.style.width = (600/arr.length)+'px';
+        let span = document.createElement('span');
+        span.innerText = v;
+        bar.appendChild(span);
+        barsDiv.appendChild(bar);
+        bars.push(bar);
+      }
+    }
+
+    // 清除所有高亮样式
+    function clearStyles(){
+      for(let b of bars) b.classList.remove('comparing','swapping','sorted');
+    }
+
+    // 标记已排序 (绿色)
+    function markSorted(idx){
+      if(bars[idx]) bars[idx].classList.add('sorted');
+    }
+
+    // 高亮比较中的两个元素
+    function markCompare(i,j){
+      if(bars[i]) bars[i].classList.add('comparing');
+      if(bars[j]) bars[j].classList.add('comparing');
+    }
+    function unmarkCompare(i,j){
+      if(bars[i]) bars[i].classList.remove('comparing');
+      if(bars[j]) bars[j].classList.remove('comparing');
+    }
+
+    // 交换数据并更新UI
+    function swapUI(i,j){
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      let maxVal = Math.max(...arr,1);
+      [i,j].forEach(idx=>{
+        let bar = bars[idx];
+        let v = arr[idx];
+        let span = bar.querySelector('span');
+        if(span) span.innerText = v;
+        let h = (v/maxVal)*180;
+        bar.style.height = Math.max(30, h)+'px';
+      });
+    }
+
+    // 延迟函数
+    function delay(ms){
+      return new Promise(resolve=>{ timer = setTimeout(resolve, ms); });
+    }
+
+    // **** 核心：冒泡排序生成器 (增加每趟完成提示) ****
+    async function* bubbleSteps(){
+      let n = arr.length;
+      let pass = 0;               // 当前趟数计数器
+      for(let i=0;i<n-1;i++){
+        pass++;
+        let swapped = false;
+        // 显示当前趟数开始 (可选)
+        infoDiv.innerText = `🔁 第 ${pass} 趟排序进行中...`;
+        for(let j=0;j<n-1-i;j++){
+          markCompare(j, j+1);
+          yield 'compare';
+          if(arr[j] > arr[j+1]){
+            if(bars[j]) bars[j].classList.add('swapping');
+            if(bars[j+1]) bars[j+1].classList.add('swapping');
+            yield 'swap_start';
+            swapUI(j, j+1);
+            yield 'swap_end';
+            if(bars[j]) bars[j].classList.remove('swapping');
+            if(bars[j+1]) bars[j+1].classList.remove('swapping');
+            swapped = true;
+          }
+          unmarkCompare(j, j+1);
+          yield 'compare_end';
+        }
+        // 当前趟结束：标记最后一个元素已归位
+        markSorted(n-1-i);
+        yield 'sorted_mark';
+        // ✅ 每趟完成提示（关键修改）
+        infoDiv.innerText = `✅ 第 ${pass} 趟排序完成！最大值已归位到末尾。`;
+        yield 'pass_hint';   // 给一点时间让用户看到提示
+        if(!swapped){
+          // 如果无交换，剩余所有元素直接标记为已排序
+          for(let k=0;k<=n-1-i;k++) markSorted(k);
+          infoDiv.innerText = `🎉 排序提前完成！总共进行了 ${pass} 趟。`;
+          break;
+        }
+      }
+      if(arr.length>0 && !bars[0]?.classList.contains('sorted')) markSorted(0);
+      infoDiv.innerText = `🏁 全部排序完成！ (共 ${pass} 趟)`;
+    }
+
+    // 运行动画
+    async function run(){
+      if(sorting){
+        if(timer) clearTimeout(timer);
+        sorting = false;
+        await delay(20);
+      }
+      sorting = true;
+      clearStyles();
+      infoDiv.innerText = '⚡ 开始冒泡排序...';
+      let gen = bubbleSteps();
+      let done = false;
+      while(!done && sorting){
+        let r = await gen.next();
+        if(r.done){ done=true; break; }
+        let val = r.value;
+        if(val === 'compare') await delay(speed);
+        else if(val === 'swap_start') await delay(100);
+        else if(val === 'swap_end') await delay(80);
+        else if(val === 'compare_end') await delay(speed*0.6);
+        else if(val === 'sorted_mark') await delay(60);
+        else if(val === 'pass_hint') await delay(700);  // 让提示停留稍久
+      }
+      if(sorting){
+        sorting = false;
+      }
+      if(timer) clearTimeout(timer);
+      timer = null;
+    }
+
+    // 重置所有
+    function reset(){
+      if(sorting){
+        if(timer) clearTimeout(timer);
+        sorting = false;
+      }
+      let size = parseInt(sizeSelect.value);
+      arr = randomArray(size);
+      render();
+      clearStyles();
+      infoDiv.innerText = '✅ 已重置新数组。点击“开始排序”。';
+    }
+    // 事件绑定
+    speedSlider.addEventListener('input', () => {
+      updateSpeedDisplay();
+    });
+    // 按钮事件
+    startBtn.onclick = ()=>{
+      if(sorting){
+        sorting = false;
+        if(timer) clearTimeout(timer);
+        setTimeout(()=> run(), 50);
+      }else{
+        run();
+      }
+    };
+    resetBtn.onclick = ()=>{
+      if(sorting){
+        sorting = false;
+        if(timer) clearTimeout(timer);
+      }
+      reset();
+    };
+    speedSlider.oninput = (e)=> speed = parseInt(e.target.value);
+    sizeSelect.onchange = ()=> reset();
+    reset();  // 初始化
+  })();
+</script>
+</body>
+</html>
